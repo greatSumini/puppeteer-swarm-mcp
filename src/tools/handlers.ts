@@ -17,6 +17,33 @@ function successResult(data: object): CallToolResult {
   };
 }
 
+/**
+ * 스크립트가 단일 표현식인지 판별
+ */
+function isSingleExpression(script: string): boolean {
+  const trimmed = script.trim();
+
+  // return으로 시작하면 복합 스크립트
+  if (/^return\b/.test(trimmed)) {
+    return false;
+  }
+
+  // 세미콜론이 중간에 있으면 여러 문장
+  const withoutTrailingSemicolon = trimmed.replace(/;$/, '');
+  if (withoutTrailingSemicolon.includes(';')) {
+    return false;
+  }
+
+  // 여러 줄 + 제어문 포함 시 복합 스크립트
+  if (trimmed.includes('\n')) {
+    if (/\b(if|for|while|switch|try|const|let|var|function|class)\b/.test(trimmed)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown>
@@ -148,18 +175,44 @@ export async function handleToolCall(
           return errorResult(`Tab not found: ${tabId}`);
         }
 
-        logger.debug('Executing script in browser', { tabId, scriptLength: script.length });
+        if (!script || script.trim().length === 0) {
+          return errorResult('Script cannot be empty');
+        }
 
-        const result = await tab.page.evaluate(`(async () => {
-          try {
-            const result = (function() { ${script} })();
-            return result;
-          } catch (e) {
-            return { error: e.message };
+        const trimmedScript = script.trim();
+
+        logger.debug('Executing script in browser', {
+          tabId,
+          scriptLength: trimmedScript.length
+        });
+
+        const shouldAutoReturn = isSingleExpression(trimmedScript);
+        const executableScript = shouldAutoReturn
+          ? `return (${trimmedScript.replace(/;$/, '')})`
+          : trimmedScript;
+
+        try {
+          const evalResult = await tab.page.evaluate(`(async () => {
+            try {
+              const __result__ = await (async () => { ${executableScript} })();
+              return { result: __result__, isError: false };
+            } catch (__e__) {
+              return { result: null, isError: true, error: __e__.message };
+            }
+          })()`);
+
+          const typedResult = evalResult as { result: unknown; isError: boolean; error?: string };
+
+          if (typedResult.isError) {
+            return errorResult(`Script error: ${typedResult.error}`);
           }
-        })()`);
 
-        return successResult({ result });
+          return successResult({ result: typedResult.result });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error('Script execution failed', { tabId, error: errorMessage });
+          return errorResult(`Execution failed: ${errorMessage}`);
+        }
       }
 
       case "wait_for_selector": {

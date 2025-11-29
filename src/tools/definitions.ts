@@ -84,12 +84,15 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "evaluate",
-    description: "페이지 컨텍스트에서 JavaScript를 실행합니다.",
+    description: "페이지 컨텍스트에서 JavaScript를 실행합니다. 단일 표현식(예: 'document.title', '1 + 1')은 자동으로 결과가 반환됩니다. 복잡한 스크립트는 'return' 문을 명시적으로 사용하세요.",
     inputSchema: {
       type: "object",
       properties: {
         tabId: { type: "string", description: "대상 탭 ID" },
-        script: { type: "string", description: "실행할 JavaScript 코드" },
+        script: {
+          type: "string",
+          description: "실행할 JavaScript 코드. 단일 표현식은 자동 반환, 복잡한 로직은 return 문 필요",
+        },
       },
       required: ["tabId", "script"],
     },
