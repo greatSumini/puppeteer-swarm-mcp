@@ -1,18 +1,18 @@
 {
-    "name": "puppeteer-mcp-server",
-    "version": "0.7.2",
-    "description": "Experimental MCP server for browser automation using Puppeteer (inspired by @modelcontextprotocol/server-puppeteer)",
+    "name": "puppeteer-swarm-mcp",
+    "version": "0.8.0",
+    "description": "MCP server for browser automation with tab pool support using Puppeteer",
     "license": "MIT",
-    "author": "Meraj Mehrabi",
-    "homepage": "https://github.com/merajmehrabi/puppeteer-mcp-server",
-    "bugs": "https://github.com/merajmehrabi/puppeteer-mcp-server/issues",
+    "author": "Choi Sumin",
+    "homepage": "https://github.com/greatSumini/puppeteer-swarm-mcp",
+    "bugs": "https://github.com/greatSumini/puppeteer-swarm-mcp/issues",
     "repository": {
         "type": "git",
-        "url": "https://github.com/merajmehrabi/puppeteer-mcp-server.git"
+        "url": "https://github.com/greatSumini/puppeteer-swarm-mcp.git"
     },
     "type": "module",
     "bin": {
-      "mcp-server-puppeteer": "dist/index.js"
+      "puppeteer-swarm-mcp": "dist/index.js"
     },
     "files": [
       "dist"

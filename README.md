@@ -1,271 +1,272 @@
-# Puppeteer MCP Server
+# Puppeteer Swarm MCP
 
-[![smithery badge](https://smithery.ai/badge/@merajmehrabi/puppeteer-mcp-server)](https://smithery.ai/server/@merajmehrabi/puppeteer-mcp-server)
-This MCP server provides browser automation capabilities through Puppeteer, allowing interaction with both new browser instances and existing Chrome windows.
-
-## Acknowledgment
-
-This project is an experimental implementation inspired by [@modelcontextprotocol/server-puppeteer](https://github.com/modelcontextprotocol/servers). While it shares similar goals and concepts, it explores alternative approaches to browser automation through the Model Context Protocol.
-
-<a href="https://glama.ai/mcp/servers/lpt1tvbubf"><img width="380" height="200" src="https://glama.ai/mcp/servers/lpt1tvbubf/badge" alt="Puppeteer Server MCP server" /></a>
+MCP server for browser automation with **tab pool** support using Puppeteer.
 
 ## Features
 
-- Navigate web pages
-- Take screenshots
-- Click elements
-- Fill forms
-- Select options
-- Hover elements
-- Execute JavaScript
-
-## Project Structure
-
-```
-/
-├── src/
-│   ├── config/        # Configuration modules
-│   ├── tools/         # Tool definitions and handlers
-│   ├── browser/       # Browser connection management
-│   ├── types/         # TypeScript type definitions
-│   ├── resources/     # Resource handlers
-│   └── server.ts      # Server initialization
-├── index.ts          # Entry point
-└── README.md        # Documentation
-```
+- **Tab Pool**: Manage multiple browser tabs concurrently
+- **Auto-release**: Automatically release tabs after idle timeout (default: 5 minutes)
+- **Auto-recovery**: Automatically recover crashed tabs
+- **Configurable**: Set tab count and headless mode via CLI arguments
 
 ## Installation
 
 ### Option 1: Install from npm
 
 ```bash
-npm install -g puppeteer-mcp-server
+npm install -g puppeteer-swarm-mcp
 ```
 
-You can also run it directly without installation using npx:
+Or run directly using npx:
 
 ```bash
-npx puppeteer-mcp-server
+npx puppeteer-swarm-mcp
 ```
 
 ### Option 2: Install from source
 
-1. Clone this repository or download the source code
-2. Install dependencies:
-
 ```bash
+git clone https://github.com/greatSumini/puppeteer-swarm-mcp.git
+cd puppeteer-swarm-mcp
 npm install
-```
-
-3. Build the project:
-
-```bash
 npm run build
 ```
 
-4. Run the server:
+## Usage
 
 ```bash
-npm start
+# Default: 5 tabs, headless=false
+puppeteer-swarm-mcp
+
+# Custom tab count
+puppeteer-swarm-mcp --tabs=10
+
+# Headless mode
+puppeteer-swarm-mcp --headless
+
+# Combined options
+puppeteer-swarm-mcp --tabs=10 --headless
+```
+
+### Environment Variables
+
+```bash
+TAB_COUNT=10 HEADLESS=true puppeteer-swarm-mcp
 ```
 
 ## MCP Server Configuration
 
-To use this tool with Claude, you need to add it to your MCP settings configuration file.
-
 ### For Claude Desktop App
 
-Add the following to your Claude Desktop configuration file (located at `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
-#### If installed globally via npm:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "puppeteer-mcp-server",
-      "args": [],
-      "env": {}
-    }
-  }
-}
-```
-
-#### Using npx (without installation):
+Add the following to your Claude Desktop configuration file:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "puppeteer": {
       "command": "npx",
-      "args": ["-y", "puppeteer-mcp-server"],
-      "env": {}
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
     }
   }
 }
 ```
-
-#### If installed from source:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "node",
-      "args": ["path/to/puppeteer-mcp-server/dist/index.js"],
-      "env": {
-        "NODE_OPTIONS": "--experimental-modules"
-      }
-    }
-  }
-}
-```
-
-### For Claude VSCode Extension
-
-Add the following to your Claude VSCode extension MCP settings file (located at `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json` on Windows or `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` on macOS):
-
-#### If installed globally via npm:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "puppeteer-mcp-server",
-      "args": [],
-      "env": {}
-    }
-  }
-}
-```
-
-#### Using npx (without installation):
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "npx",
-      "args": ["-y", "puppeteer-mcp-server"],
-      "env": {}
-    }
-  }
-}
-```
-
-#### If installed from source:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "node",
-      "args": ["path/to/puppeteer-mcp-server/dist/index.js"],
-      "env": {
-        "NODE_OPTIONS": "--experimental-modules"
-      }
-    }
-  }
-}
-```
-
-For source installation, replace `path/to/puppeteer-mcp-server` with the actual path to where you installed this tool.
-
-## Usage
-
-The server will launch a new browser instance by default.
 
 ## Available Tools
 
-### puppeteer_navigate
-Navigate to a URL.
-- Required: `url` - The URL to navigate to
+### get_pool_status
 
-### puppeteer_screenshot
-Take a screenshot of the current page or a specific element.
-- Required: `name` - Name for the screenshot
-- Optional:
-  - `selector` - CSS selector for element to screenshot
-  - `width` - Width in pixels (default: 800)
-  - `height` - Height in pixels (default: 600)
+Get the current status of the tab pool.
 
-### puppeteer_click
-Click an element on the page.
-- Required: `selector` - CSS selector for element to click
+**Parameters**: None
 
-### puppeteer_fill
-Fill out an input field.
-- Required:
-  - `selector` - CSS selector for input field
-  - `value` - Text to enter
+**Returns**:
+```json
+{
+  "total": 5,
+  "idle": 3,
+  "busy": 2
+}
+```
 
-### puppeteer_select
-Use dropdown menus.
-- Required:
-  - `selector` - CSS selector for select element
-  - `value` - Option value to select
+---
 
-### puppeteer_hover
-Hover over elements.
-- Required: `selector` - CSS selector for element to hover
+### navigate
 
-### puppeteer_evaluate
-Execute JavaScript in the browser console.
-- Required: `script` - JavaScript code to execute
+Allocate an idle tab and navigate to a URL.
 
-## Logging and Debugging
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `url` | string | Yes | URL to navigate to |
+| `waitUntil` | string | No | Wait condition (`load`, `domcontentloaded`, `networkidle0`, `networkidle2`) |
 
-### File-based Logging
-The server implements comprehensive logging using Winston:
+**Returns**:
+```json
+{
+  "tabId": "tab-1",
+  "url": "https://example.com",
+  "title": "Example Domain"
+}
+```
 
-- Location: `logs/` directory
+---
+
+### get_content
+
+Extract HTML or text content from a page.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `type` | string | No | Extract format (`html`, `text`). Default: `text` |
+
+**Returns**:
+```json
+{
+  "content": "..."
+}
+```
+
+---
+
+### screenshot
+
+Capture a page screenshot.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `fullPage` | boolean | No | Capture full page. Default: `false` |
+
+**Returns**: Image content (base64 PNG)
+
+---
+
+### click
+
+Click an element by CSS selector.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `selector` | string | Yes | CSS selector |
+
+**Returns**:
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### type
+
+Type text into an input field.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `selector` | string | Yes | CSS selector |
+| `text` | string | Yes | Text to type |
+
+**Returns**:
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### evaluate
+
+Execute JavaScript in the page context.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `script` | string | Yes | JavaScript code to execute |
+
+**Returns**:
+```json
+{
+  "result": "..."
+}
+```
+
+---
+
+### wait_for_selector
+
+Wait for an element to appear in the DOM.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Target tab ID |
+| `selector` | string | Yes | CSS selector |
+| `timeout` | number | No | Timeout in ms. Default: `30000` |
+
+**Returns**:
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### release_tab
+
+Release a tab back to idle state.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `tabId` | string | Yes | Tab ID to release |
+
+**Returns**:
+```json
+{
+  "success": true
+}
+```
+
+## Workflow Example
+
+```
+1. navigate({ url: "https://example.com" })
+   -> Returns { tabId: "tab-1", ... }
+
+2. get_content({ tabId: "tab-1", type: "text" })
+   -> Returns page content
+
+3. click({ tabId: "tab-1", selector: "button.submit" })
+   -> Click a button
+
+4. release_tab({ tabId: "tab-1" })
+   -> Release the tab for reuse
+```
+
+## Logging
+
+Logs are stored in the `logs/` directory:
 - File Pattern: `mcp-puppeteer-YYYY-MM-DD.log`
-- Log Rotation:
-  - Daily rotation
-  - Maximum size: 20MB per file
-  - Retention: 14 days
-  - Automatic compression of old logs
-
-### Log Levels
-- DEBUG: Detailed debugging information
-- INFO: General operational information
-- WARN: Warning messages
-- ERROR: Error events and exceptions
-
-### Logged Information
-- Server startup/shutdown events
-- Browser operations (launch, connect, close)
-- Navigation attempts and results
-- Tool executions and outcomes
-- Error details with stack traces
-- Browser console output
-- Resource usage (screenshots, console logs)
-
-## Error Handling
-
-The server provides detailed error messages for:
-- Connection failures
-- Missing elements
-- Invalid selectors
-- JavaScript execution errors
-- Screenshot failures
-
-Each tool call returns:
-- Success/failure status
-- Detailed error message if failed
-- Operation result data if successful
-
-All errors are also logged to the log files with:
-- Timestamp
-- Error message
-- Stack trace (when available)
-- Context information
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
-
+- Daily rotation, max 20MB per file
+- 14 days retention with auto-compression
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+**Choi Sumin** - [GitHub](https://github.com/greatSumini)

@@ -1,239 +1,194 @@
-import { CallToolResult, TextContent, ImageContent } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolResult, ImageContent } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../config/logger.js";
-import { BrowserState } from "../types/global.js";
-import {
-  ensureBrowser,
-  getCurrentPage
-} from "../browser/connection.js";
-import { notifyConsoleUpdate, notifyScreenshotUpdate } from "../resources/handlers.js";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { tabPool } from "../browser/tab-pool.js";
+import { PuppeteerLifeCycleEvent } from "puppeteer";
+
+function errorResult(message: string): CallToolResult {
+  return {
+    content: [{ type: "text", text: message }],
+    isError: true,
+  };
+}
+
+function successResult(data: object): CallToolResult {
+  return {
+    content: [{ type: "text", text: JSON.stringify(data) }],
+    isError: false,
+  };
+}
 
 export async function handleToolCall(
-  name: string, 
-  args: any, 
-  state: BrowserState,
-  server: Server
+  name: string,
+  args: Record<string, unknown>
 ): Promise<CallToolResult> {
   logger.debug('Tool call received', { tool: name, arguments: args });
-  const page = await ensureBrowser();
 
-  switch (name) {
-    case "puppeteer_navigate":
-      try {
-        logger.info('Navigating to URL', { url: args.url });
-        const response = await page.goto(args.url, {
-          waitUntil: 'networkidle0',
-          timeout: 30000
+  try {
+    switch (name) {
+      case "get_pool_status": {
+        const status = tabPool.getPoolStatus();
+        return successResult(status);
+      }
+
+      case "navigate": {
+        const url = args.url as string;
+        const waitUntil = (args.waitUntil as PuppeteerLifeCycleEvent) || "load";
+
+        const tab = await tabPool.acquireTab();
+
+        try {
+          logger.info(`Navigating tab ${tab.id} to URL`, { url });
+
+          const response = await tab.page.goto(url, {
+            waitUntil,
+            timeout: 30000,
+          });
+
+          if (!response) {
+            throw new Error('Navigation failed - no response received');
+          }
+
+          const status = response.status();
+          if (status >= 400) {
+            throw new Error(`HTTP error: ${status} ${response.statusText()}`);
+          }
+
+          const title = await tab.page.title();
+          tab.currentUrl = url;
+
+          logger.info(`Navigation successful`, { tabId: tab.id, url, status });
+
+          return successResult({
+            tabId: tab.id,
+            url,
+            title,
+          });
+        } catch (error) {
+          // 네비게이션 실패 시 탭 해제
+          await tabPool.releaseTab(tab.id);
+          throw error;
+        }
+      }
+
+      case "get_content": {
+        const tabId = args.tabId as string;
+        const contentType = (args.type as string) || "text";
+
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
+        }
+
+        const content = contentType === "html"
+          ? await tab.page.content()
+          : await tab.page.evaluate(() => document.body.innerText);
+
+        return successResult({ content });
+      }
+
+      case "screenshot": {
+        const tabId = args.tabId as string;
+        const fullPage = (args.fullPage as boolean) ?? false;
+
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
+        }
+
+        const screenshot = await tab.page.screenshot({
+          encoding: "base64",
+          fullPage,
         });
-        
-        if (!response) {
-          throw new Error('Navigation failed - no response received');
+
+        return {
+          content: [
+            {
+              type: "image",
+              data: screenshot,
+              mimeType: "image/png",
+            } as ImageContent,
+          ],
+          isError: false,
+        };
+      }
+
+      case "click": {
+        const tabId = args.tabId as string;
+        const selector = args.selector as string;
+
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
         }
 
-        const status = response.status();
-        if (status >= 400) {
-          throw new Error(`HTTP error: ${status} ${response.statusText()}`);
+        await tab.page.click(selector);
+        return successResult({ success: true });
+      }
+
+      case "type": {
+        const tabId = args.tabId as string;
+        const selector = args.selector as string;
+        const text = args.text as string;
+
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
         }
 
-        logger.info('Navigation successful', { url: args.url, status });
-        return {
-          content: [{
-            type: "text",
-            text: `Successfully navigated to ${args.url} (Status: ${status})`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Navigation failed', { url: args.url, error: errorMessage });
-        return {
-          content: [{
-            type: "text",
-            text: `Navigation failed: ${errorMessage}\nThis could be due to:\n- Network connectivity issues\n- Site blocking automated access\n- Page requiring authentication\n- Navigation timeout\n\nTry using a different URL or checking network connectivity.`,
-          }],
-          isError: true,
-        };
+        await tab.page.type(selector, text);
+        return successResult({ success: true });
       }
 
-    case "puppeteer_screenshot": {
-      const width = args.width ?? 800;
-      const height = args.height ?? 600;
-      await page.setViewport({ width, height });
+      case "evaluate": {
+        const tabId = args.tabId as string;
+        const script = args.script as string;
 
-      const screenshot = await (args.selector ?
-        (await page.$(args.selector))?.screenshot({ encoding: "base64" }) :
-        page.screenshot({ encoding: "base64", fullPage: false }));
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
+        }
 
-      if (!screenshot) {
-        return {
-          content: [{
-            type: "text",
-            text: args.selector ? `Element not found: ${args.selector}` : "Screenshot failed",
-          }],
-          isError: true,
-        };
-      }
+        logger.debug('Executing script in browser', { tabId, scriptLength: script.length });
 
-      state.screenshots.set(args.name, screenshot);
-      notifyScreenshotUpdate(server);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Screenshot '${args.name}' taken at ${width}x${height}`,
-          } as TextContent,
-          {
-            type: "image",
-            data: screenshot,
-            mimeType: "image/png",
-          } as ImageContent,
-        ],
-        isError: false,
-      };
-    }
-
-    case "puppeteer_click":
-      try {
-        await page.click(args.selector);
-        return {
-          content: [{
-            type: "text",
-            text: `Clicked: ${args.selector}`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to click ${args.selector}: ${(error as Error).message}`,
-          }],
-          isError: true,
-        };
-      }
-
-    case "puppeteer_fill":
-      try {
-        await page.waitForSelector(args.selector);
-        await page.type(args.selector, args.value);
-        return {
-          content: [{
-            type: "text",
-            text: `Filled ${args.selector} with: ${args.value}`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to fill ${args.selector}: ${(error as Error).message}`,
-          }],
-          isError: true,
-        };
-      }
-
-    case "puppeteer_select":
-      try {
-        await page.waitForSelector(args.selector);
-        await page.select(args.selector, args.value);
-        return {
-          content: [{
-            type: "text",
-            text: `Selected ${args.selector} with: ${args.value}`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to select ${args.selector}: ${(error as Error).message}`,
-          }],
-          isError: true,
-        };
-      }
-
-    case "puppeteer_hover":
-      try {
-        await page.waitForSelector(args.selector);
-        await page.hover(args.selector);
-        return {
-          content: [{
-            type: "text",
-            text: `Hovered ${args.selector}`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to hover ${args.selector}: ${(error as Error).message}`,
-          }],
-          isError: true,
-        };
-      }
-
-    case "puppeteer_evaluate":
-      try {
-        // Set up console listener
-        const logs: string[] = [];
-        const consoleListener = (message: any) => {
-          logs.push(`${message.type()}: ${message.text()}`);
-        };
-        
-        page.on('console', consoleListener);
-        
-        // Execute script with proper serialization
-        logger.debug('Executing script in browser', { scriptLength: args.script.length });
-        
-        // Wrap the script in a function that returns a serializable result
-        const result = await page.evaluate(`(async () => {
+        const result = await tab.page.evaluate(`(async () => {
           try {
-            const result = (function() { ${args.script} })();
+            const result = (function() { ${script} })();
             return result;
           } catch (e) {
-            console.error('Script execution error:', e.message);
             return { error: e.message };
           }
         })()`);
-        
-        // Remove the listener to avoid memory leaks
-        page.off('console', consoleListener);
-        
-        logger.debug('Script execution result', {
-          resultType: typeof result,
-          hasResult: result !== undefined,
-          logCount: logs.length
-        });
 
-        return {
-          content: [{
-            type: "text",
-            text: `Execution result:\n${JSON.stringify(result, null, 2)}\n\nConsole output:\n${logs.join('\n')}`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        logger.error('Script evaluation failed', { error: error instanceof Error ? error.message : String(error) });
-        return {
-          content: [{
-            type: "text",
-            text: `Script execution failed: ${error instanceof Error ? error.message : String(error)}\n\nPossible causes:\n- Syntax error in script\n- Execution timeout\n- Browser security restrictions\n- Serialization issues with complex objects`,
-          }],
-          isError: true,
-        };
+        return successResult({ result });
       }
 
-    default:
-      return {
-        content: [{
-          type: "text",
-          text: `Unknown tool: ${name}`,
-        }],
-        isError: true,
-      };
+      case "wait_for_selector": {
+        const tabId = args.tabId as string;
+        const selector = args.selector as string;
+        const timeout = (args.timeout as number) ?? 30000;
+
+        const tab = tabPool.getTab(tabId);
+        if (!tab) {
+          return errorResult(`Tab not found: ${tabId}`);
+        }
+
+        await tab.page.waitForSelector(selector, { timeout });
+        return successResult({ success: true });
+      }
+
+      case "release_tab": {
+        const tabId = args.tabId as string;
+
+        await tabPool.releaseTab(tabId);
+        return successResult({ success: true });
+      }
+
+      default:
+        return errorResult(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Tool execution failed', { tool: name, error: errorMessage });
+    return errorResult(errorMessage);
   }
 }

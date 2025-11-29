@@ -2,85 +2,123 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const TOOLS: Tool[] = [
   {
-    name: "puppeteer_navigate",
-    description: "Navigate to a URL",
+    name: "get_pool_status",
+    description: "탭 풀의 현재 상태를 조회합니다.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "navigate",
+    description: "idle 상태의 탭을 할당받아 지정된 URL로 이동합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        url: { type: "string" },
+        url: { type: "string", description: "이동할 URL" },
+        waitUntil: {
+          type: "string",
+          enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"],
+          description: "대기 조건",
+        },
       },
       required: ["url"],
     },
   },
   {
-    name: "puppeteer_screenshot",
-    description: "Take a screenshot of the current page or a specific element",
+    name: "get_content",
+    description: "페이지의 HTML 또는 텍스트 콘텐츠를 추출합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Name for the screenshot" },
-        selector: { type: "string", description: "CSS selector for element to screenshot" },
-        width: { type: "number", description: "Width in pixels (default: 800)" },
-        height: { type: "number", description: "Height in pixels (default: 600)" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        type: {
+          type: "string",
+          enum: ["html", "text"],
+          description: "추출 형식 (기본: text)",
+        },
       },
-      required: ["name"],
+      required: ["tabId"],
     },
   },
   {
-    name: "puppeteer_click",
-    description: "Click an element on the page",
+    name: "screenshot",
+    description: "페이지 스크린샷을 캡처합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        selector: { type: "string", description: "CSS selector for element to click" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        fullPage: {
+          type: "boolean",
+          description: "전체 페이지 캡처 여부 (기본: false)",
+        },
       },
-      required: ["selector"],
+      required: ["tabId"],
     },
   },
   {
-    name: "puppeteer_fill",
-    description: "Fill out an input field",
+    name: "click",
+    description: "지정된 셀렉터의 요소를 클릭합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        selector: { type: "string", description: "CSS selector for input field" },
-        value: { type: "string", description: "Value to fill" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        selector: { type: "string", description: "CSS 셀렉터" },
       },
-      required: ["selector", "value"],
+      required: ["tabId", "selector"],
     },
   },
   {
-    name: "puppeteer_select",
-    description: "Select an element on the page with Select tag",
+    name: "type",
+    description: "지정된 셀렉터의 입력 필드에 텍스트를 입력합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        selector: { type: "string", description: "CSS selector for element to select" },
-        value: { type: "string", description: "Value to select" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        selector: { type: "string", description: "CSS 셀렉터" },
+        text: { type: "string", description: "입력할 텍스트" },
       },
-      required: ["selector", "value"],
+      required: ["tabId", "selector", "text"],
     },
   },
   {
-    name: "puppeteer_hover",
-    description: "Hover an element on the page",
+    name: "evaluate",
+    description: "페이지 컨텍스트에서 JavaScript를 실행합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        selector: { type: "string", description: "CSS selector for element to hover" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        script: { type: "string", description: "실행할 JavaScript 코드" },
       },
-      required: ["selector"],
+      required: ["tabId", "script"],
     },
   },
   {
-    name: "puppeteer_evaluate",
-    description: "Execute JavaScript in the browser console",
+    name: "wait_for_selector",
+    description: "지정된 셀렉터가 DOM에 나타날 때까지 대기합니다.",
     inputSchema: {
       type: "object",
       properties: {
-        script: { type: "string", description: "JavaScript code to execute" },
+        tabId: { type: "string", description: "대상 탭 ID" },
+        selector: { type: "string", description: "CSS 셀렉터" },
+        timeout: {
+          type: "number",
+          description: "타임아웃 (ms, 기본: 30000)",
+        },
       },
-      required: ["script"],
+      required: ["tabId", "selector"],
+    },
+  },
+  {
+    name: "release_tab",
+    description: "사용 완료된 탭을 idle 상태로 반환합니다.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tabId: { type: "string", description: "반환할 탭 ID" },
+      },
+      required: ["tabId"],
     },
   },
 ];
