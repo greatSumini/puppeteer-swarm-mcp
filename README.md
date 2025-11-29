@@ -4,6 +4,7 @@ MCP server for browser automation with **tab pool** support using Puppeteer.
 
 ## Features
 
+- **Explicit Browser Control**: Launch and close browser on demand via `launch`/`close` tools
 - **Tab Pool**: Manage multiple browser tabs concurrently
 - **Auto-release**: Automatically release tabs after idle timeout (default: 5 minutes)
 - **Auto-recovery**: Automatically recover crashed tabs
@@ -200,18 +201,62 @@ Add this to your Zed `settings.json`:
 
 ## Available Tools
 
-### get_pool_status
+### launch
 
-Get the current status of the tab pool.
+Initialize the browser and tab pool. **Must be called before using any other browser tools.**
 
 **Parameters**: None
 
 **Returns**:
 ```json
 {
+  "message": "브라우저가 성공적으로 시작되었습니다.",
+  "config": {
+    "tabCount": 5,
+    "headless": false,
+    "idleTimeout": 300000
+  }
+}
+```
+
+---
+
+### close
+
+Close the browser and all tabs.
+
+**Parameters**: None
+
+**Returns**:
+```json
+{
+  "message": "브라우저가 종료되었습니다."
+}
+```
+
+---
+
+### get_pool_status
+
+Get the current status of the tab pool. Can be called before `launch` to check initialization status.
+
+**Parameters**: None
+
+**Returns** (after launch):
+```json
+{
+  "initialized": true,
   "total": 5,
   "idle": 3,
   "busy": 2
+}
+```
+
+**Returns** (before launch):
+```json
+{
+  "initialized": false,
+  "message": "브라우저가 초기화되지 않았습니다. 먼저 'launch' 도구를 호출하세요."
 }
 ```
 
@@ -368,18 +413,26 @@ Release a tab back to idle state.
 ## Workflow Example
 
 ```
-1. navigate({ url: "https://example.com" })
+1. launch()
+   -> Initialize browser and tab pool
+
+2. navigate({ url: "https://example.com" })
    -> Returns { tabId: "tab-1", ... }
 
-2. get_content({ tabId: "tab-1", type: "text" })
+3. get_content({ tabId: "tab-1", type: "text" })
    -> Returns page content
 
-3. click({ tabId: "tab-1", selector: "button.submit" })
+4. click({ tabId: "tab-1", selector: "button.submit" })
    -> Click a button
 
-4. release_tab({ tabId: "tab-1" })
+5. release_tab({ tabId: "tab-1" })
    -> Release the tab for reuse
+
+6. close()
+   -> Close browser when done (optional)
 ```
+
+> **Note**: The browser does not start automatically. You must call `launch` before using any browser tools.
 
 ## Logging
 
