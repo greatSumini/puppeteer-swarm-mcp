@@ -1,6 +1,6 @@
 {
     "name": "puppeteer-swarm-mcp",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "MCP server for browser automation with tab pool support using Puppeteer",
     "license": "MIT",
     "author": "Choi Sumin",
@@ -12,26 +12,26 @@
     },
     "type": "module",
     "bin": {
-      "puppeteer-swarm-mcp": "dist/index.js"
+        "puppeteer-swarm-mcp": "dist/index.js"
     },
     "files": [
-      "dist"
+        "dist"
     ],
     "scripts": {
-      "build": "tsc && shx chmod +x dist/*.js",
-      "prepare": "npm run build",
-      "watch": "tsc --watch"
+        "build": "tsc && shx chmod +x dist/*.js",
+        "prepare": "npm run build",
+        "watch": "tsc --watch"
     },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "1.0.1",
-    "puppeteer": "^23.4.0",
-    "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "1.0.1",
+        "puppeteer": "^23.4.0",
+        "winston": "^3.11.0",
+        "winston-daily-rotate-file": "^5.0.0"
     },
-  "devDependencies": {
-    "@types/node": "^20.11.17",
-    "@types/winston": "^2.4.4",
-    "shx": "^0.3.4",
-    "typescript": "^5.6.2"
+    "devDependencies": {
+        "@types/node": "^20.11.17",
+        "@types/winston": "^2.4.4",
+        "shx": "^0.3.4",
+        "typescript": "^5.6.2"
     }
-  }
+}

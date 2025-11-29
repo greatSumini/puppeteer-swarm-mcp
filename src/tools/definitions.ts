@@ -2,6 +2,24 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const TOOLS: Tool[] = [
   {
+    name: "launch",
+    description: "브라우저와 탭 풀을 초기화합니다. 다른 브라우저 도구 사용 전에 반드시 호출해야 합니다.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "close",
+    description: "브라우저를 종료하고 모든 탭을 닫습니다.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: "get_pool_status",
     description: "탭 풀의 현재 상태를 조회합니다.",
     inputSchema: {

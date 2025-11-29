@@ -1,6 +1,9 @@
 import { CallToolResult, ImageContent } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../config/logger.js";
 import { tabPool } from "../browser/tab-pool.js";
+import { getCliConfig, initializeTabPool, closeBrowser } from "../browser/connection.js";
+import { browserStateManager } from "../browser/state-manager.js";
+import { validateToolAccess } from "./access-control.js";
 import { PuppeteerLifeCycleEvent } from "puppeteer";
 
 function errorResult(message: string): CallToolResult {
@@ -50,11 +53,52 @@ export async function handleToolCall(
 ): Promise<CallToolResult> {
   logger.debug('Tool call received', { tool: name, arguments: args });
 
+  // 접근 제어 검증
+  const accessResult = validateToolAccess(name);
+  if (!accessResult.allowed) {
+    return errorResult(accessResult.error!);
+  }
+
   try {
     switch (name) {
+      case "launch": {
+        if (browserStateManager.isLaunched()) {
+          return errorResult("브라우저가 이미 실행 중입니다.");
+        }
+
+        const config = getCliConfig();
+        await initializeTabPool(config);
+        browserStateManager.setLaunched();
+
+        logger.info('Browser launched via tool', { config });
+        return successResult({
+          message: "브라우저가 성공적으로 시작되었습니다.",
+          config,
+        });
+      }
+
+      case "close": {
+        if (!browserStateManager.isLaunched()) {
+          return errorResult("브라우저가 실행 중이 아닙니다.");
+        }
+
+        await closeBrowser();
+        browserStateManager.setClosed();
+
+        logger.info('Browser closed via tool');
+        return successResult({ message: "브라우저가 종료되었습니다." });
+      }
+
       case "get_pool_status": {
+        if (!browserStateManager.isLaunched()) {
+          return successResult({
+            initialized: false,
+            message: "브라우저가 초기화되지 않았습니다. 먼저 'launch' 도구를 호출하세요.",
+          });
+        }
+
         const status = tabPool.getPoolStatus();
-        return successResult(status);
+        return successResult({ initialized: true, ...status });
       }
 
       case "navigate": {

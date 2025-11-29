@@ -4,10 +4,12 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { logger } from "./config/logger.js";
 import { TOOLS } from "./tools/definitions.js";
 import { handleToolCall } from "./tools/handlers.js";
-import { initializeTabPool, closeBrowser } from "./browser/connection.js";
+import { setCliConfig, closeBrowser } from "./browser/connection.js";
+import { browserStateManager } from "./browser/state-manager.js";
+import { BrowserLaunchConfig } from "./types/browser-state.js";
 
 // CLI 인자 파싱
-function parseArgs(): { tabCount: number; headless: boolean } {
+function parseArgs(): BrowserLaunchConfig {
   const args = process.argv.slice(2);
 
   // --tabs=N 형식 파싱
@@ -19,7 +21,7 @@ function parseArgs(): { tabCount: number; headless: boolean } {
   // --headless 플래그 파싱
   const headless = args.includes('--headless') || process.env.HEADLESS === 'true';
 
-  return { tabCount, headless };
+  return { tabCount, headless, idleTimeout: 300000 };
 }
 
 // Create and configure server
@@ -47,22 +49,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) =>
 // Handle server shutdown
 process.stdin.on("close", async () => {
   logger.info("Puppeteer MCP Server closing");
-  await closeBrowser();
+  if (browserStateManager.isLaunched()) {
+    await closeBrowser();
+  }
   await server.close();
 });
 
 // Start the server
 export async function runServer() {
   try {
-    const { tabCount, headless } = parseArgs();
+    const cliConfig = parseArgs();
+    setCliConfig(cliConfig);
 
-    logger.info('Starting MCP server', { tabCount, headless });
-
-    // 탭 풀 초기화
-    await initializeTabPool({
-      tabCount,
-      headless,
-      idleTimeout: 300000, // 5분
+    logger.info('Starting MCP server (browser not launched)', {
+      tabCount: cliConfig.tabCount,
+      headless: cliConfig.headless,
     });
 
     const transport = new StdioServerTransport();

@@ -185,6 +185,10 @@ export class TabPool {
     return tab;
   }
 
+  isInitialized(): boolean {
+    return this.browser !== null;
+  }
+
   getPoolStatus(): PoolStatus {
     let idle = 0;
     let busy = 0;
