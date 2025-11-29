@@ -1,6 +1,6 @@
 {
     "name": "puppeteer-swarm-mcp",
-    "version": "0.8.0",
+    "version": "0.0.0",
     "description": "MCP server for browser automation with tab pool support using Puppeteer",
     "license": "MIT",
     "author": "Choi Sumin",
