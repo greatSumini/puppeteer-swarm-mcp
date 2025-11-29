@@ -18,10 +18,6 @@ This project is an experimental implementation inspired by [@modelcontextprotoco
 - Select options
 - Hover elements
 - Execute JavaScript
-- Smart Chrome tab management:
-  - Connect to active Chrome tabs
-  - Preserve existing Chrome instances
-  - Intelligent connection handling
 
 ## Project Structure
 
@@ -177,51 +173,9 @@ For source installation, replace `path/to/puppeteer-mcp-server` with the actual 
 
 ## Usage
 
-### Standard Mode
-
 The server will launch a new browser instance by default.
 
-### Active Tab Mode
-
-To connect to an existing Chrome window:
-
-1. Close any existing Chrome instances completely
-
-2. Launch Chrome with remote debugging enabled:
-   ```bash
-   # Windows
-   "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
-
-   # macOS
-   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
-
-   # Linux
-   google-chrome --remote-debugging-port=9222
-   ```
-
-3. Navigate to your desired webpage in Chrome
-
-4. Connect using the `puppeteer_connect_active_tab` tool:
-   ```json
-   {
-     "targetUrl": "https://example.com", // Optional: specific tab URL
-     "debugPort": 9222 // Optional: defaults to 9222
-   }
-   ```
-
-The server will:
-- Detect and connect to the Chrome instance running with remote debugging enabled
-- Preserve your Chrome instance (won't close it)
-- Find and connect to non-extension tabs
-- Provide clear error messages if connection fails
-
 ## Available Tools
-
-### puppeteer_connect_active_tab
-Connect to an existing Chrome instance with remote debugging enabled.
-- Optional:
-  - `targetUrl` - URL of the specific tab to connect to
-  - `debugPort` - Chrome debugging port (default: 9222)
 
 ### puppeteer_navigate
 Navigate to a URL.
@@ -258,14 +212,6 @@ Hover over elements.
 ### puppeteer_evaluate
 Execute JavaScript in the browser console.
 - Required: `script` - JavaScript code to execute
-
-## Security Considerations
-
-When using remote debugging:
-- Only enable on trusted networks
-- Use a unique debugging port
-- Close debugging port when not in use
-- Never expose debugging port to public networks
 
 ## Logging and Debugging
 

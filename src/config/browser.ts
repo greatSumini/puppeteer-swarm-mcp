@@ -27,6 +27,3 @@ export const dockerConfig: LaunchOptions = {
 
 // Default navigation timeout in milliseconds
 export const DEFAULT_NAVIGATION_TIMEOUT = 30000;
-
-// Default debugging port for Chrome
-export const DEFAULT_DEBUG_PORT = 9222;

@@ -1,11 +1,9 @@
 import { CallToolResult, TextContent, ImageContent } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../config/logger.js";
 import { BrowserState } from "../types/global.js";
-import { 
-  ensureBrowser, 
-  getDebuggerWebSocketUrl, 
-  connectToExistingBrowser,
-  getCurrentPage 
+import {
+  ensureBrowser,
+  getCurrentPage
 } from "../browser/connection.js";
 import { notifyConsoleUpdate, notifyScreenshotUpdate } from "../resources/handlers.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -20,49 +18,6 @@ export async function handleToolCall(
   const page = await ensureBrowser();
 
   switch (name) {
-    case "puppeteer_connect_active_tab":
-      try {
-        const wsEndpoint = await getDebuggerWebSocketUrl(args.debugPort);
-        const connectedPage = await connectToExistingBrowser(
-          wsEndpoint, 
-          args.targetUrl,
-          (logEntry) => {
-            state.consoleLogs.push(logEntry);
-            notifyConsoleUpdate(server);
-          }
-        );
-        const url = await connectedPage.url();
-        const title = await connectedPage.title();
-        return {
-          content: [{
-            type: "text",
-            text: `Successfully connected to browser\nActive webpage: ${title} (${url})`,
-          }],
-          isError: false,
-        };
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        const isConnectionError = errorMessage.includes('connect to Chrome debugging port') || 
-                                errorMessage.includes('Target closed');
-        
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to connect to browser: ${errorMessage}\n\n` +
-                  (isConnectionError ? 
-                    "To connect to Chrome:\n" +
-                    "1. Close Chrome completely\n" +
-                    "2. Reopen Chrome with remote debugging enabled:\n" +
-                    "   Windows: chrome.exe --remote-debugging-port=9222\n" +
-                    "   Mac: /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222\n" +
-                    "3. Navigate to your desired webpage\n" +
-                    "4. Try the operation again" : 
-                    "Please check if Chrome is running and try again.")
-          }],
-          isError: true,
-        };
-      }
-
     case "puppeteer_navigate":
       try {
         logger.info('Navigating to URL', { url: args.url });

@@ -125,7 +125,6 @@ When reporting issues, please include:
 ### Browser Environment
 - Docker: Uses headless mode with security flags
 - NPX: Uses GUI mode with enhanced settings
-- Active Tab Mode: Requires remote debugging port
 
 ### Resource Limitations
 - In-memory storage only
