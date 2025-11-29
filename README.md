@@ -54,9 +54,54 @@ puppeteer-swarm-mcp --tabs=10 --headless
 TAB_COUNT=10 HEADLESS=true puppeteer-swarm-mcp
 ```
 
-## MCP Server Configuration
+## MCP Client Integration
 
-### For Claude Desktop App
+Puppeteer Swarm MCP can be integrated with various AI coding assistants and IDEs that support the Model Context Protocol (MCP).
+
+### Requirements
+
+- Node.js >= v18.0.0
+- An MCP-compatible client (Claude Code, Cursor, VS Code, Windsurf, etc.)
+
+<details>
+<summary><b>Install in Claude Code</b></summary>
+
+Run this command:
+
+```sh
+claude mcp add puppeteer-swarm -- npx -y puppeteer-swarm-mcp --tabs=5 --headless
+```
+
+Or with custom options:
+
+```sh
+claude mcp add puppeteer-swarm -- npx -y puppeteer-swarm-mcp --tabs=10
+```
+
+</details>
+
+<details>
+<summary><b>Install in Cursor</b></summary>
+
+Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
+
+Add the following configuration to your `~/.cursor/mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer-swarm": {
+      "command": "npx",
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Install in Claude Desktop</b></summary>
 
 Add the following to your Claude Desktop configuration file:
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -65,13 +110,93 @@ Add the following to your Claude Desktop configuration file:
 ```json
 {
   "mcpServers": {
-    "puppeteer": {
+    "puppeteer-swarm": {
       "command": "npx",
       "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
     }
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><b>Install in VS Code</b></summary>
+
+Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more info.
+
+```json
+"mcp": {
+  "servers": {
+    "puppeteer-swarm": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Install in Windsurf</b></summary>
+
+Add this to your Windsurf MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer-swarm": {
+      "command": "npx",
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Install in Cline</b></summary>
+
+1. Open **Cline**
+2. Click the hamburger menu icon (☰) to enter the **MCP Servers** section
+3. Choose **Remote Servers** tab
+4. Click the **Edit Configuration** button
+5. Add puppeteer-swarm to `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer-swarm": {
+      "command": "npx",
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Install in Zed</b></summary>
+
+Add this to your Zed `settings.json`:
+
+```json
+{
+  "context_servers": {
+    "puppeteer-swarm": {
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "puppeteer-swarm-mcp", "--tabs=5", "--headless"]
+    }
+  }
+}
+```
+
+</details>
 
 ## Available Tools
 
